@@ -1,0 +1,78 @@
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "energieleser"
+version = "0.1.0"
+description = "Async Python client for energieleser devices (stromleser, gasleser, wasserleser, wärmeleser)."
+authors = ["nineti GmbH <info@energieleser.de>"]
+maintainers = ["Ajinkya Gokhale <ajinkya.gokhale@nineti.de>"]
+license = "MIT"
+# readme = "README.md"
+repository = "https://github.com/nineti-GmbH/energieleser.py"
+homepage = "https://energieleser.de"
+keywords = ["energieleser", "stromleser", "gasleser", "wasserleser", "waermeleser", "home-assistant", "smart-meter"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Home Automation",
+    "Typing :: Typed",
+]
+packages = [{ include = "energieleser" }]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/nineti-GmbH/energieleser.py/issues"
+"Maintainer" = "https://github.com/AjinkyaGokhale"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+aiohttp = ">=3.9"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3"
+pytest-asyncio = "^0.24"
+pytest-cov = "^5.0"
+aioresponses = "^0.7"
+mypy = "^1.11"
+ruff = "^0.6"
+
+[tool.ruff]
+line-length = 99
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D203",    # incompatible with D211
+    "D213",    # incompatible with D212
+    "COM812",  # conflicts with formatter
+    "ISC001",  # conflicts with formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "D100", "D101", "D102", "D103", "D104", "ANN", "PLR2004"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+files = ["energieleser", "tests"]
+
+[[tool.mypy.overrides]]
+module = "aioresponses.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "-ra --strict-markers --cov=energieleser --cov-report=term-missing"
+testpaths = ["tests"]
