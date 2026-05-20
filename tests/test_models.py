@@ -82,6 +82,7 @@ def test_gasleser_from_payload(gasleser_payload: dict[str, Any]) -> None:
     assert device.count == 603
     assert device.total_consumption == pytest.approx(37030.67)
     assert device.current_flow_rate == pytest.approx(0.01)
+    assert device.signal_strength_dbm == -51.0
 
 
 def test_wasserleser_from_payload(

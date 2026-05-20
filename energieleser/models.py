@@ -177,6 +177,7 @@ class GasleserDevice(EnergieleserDevice):
     count: int | None = None
     total_consumption: float | None = None
     current_flow_rate: float | None = None
+    signal_strength_dbm: float | None = None
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> GasleserDevice:
@@ -184,6 +185,7 @@ class GasleserDevice(EnergieleserDevice):
         count = payload.get("count")
         total = payload.get("total_consumption")
         flow = payload.get("current_flow_rate")
+        rssi_dbm = payload.get("rssi")
         return cls(
             device_id=payload["device_id"],
             device_type=DeviceType.GASLESER,
@@ -191,6 +193,9 @@ class GasleserDevice(EnergieleserDevice):
             count=int(count) if count is not None else None,
             total_consumption=float(total) if total is not None else None,
             current_flow_rate=float(flow) if flow is not None else None,
+            signal_strength_dbm=(
+                _parse_value_unit(rssi_dbm)[0] if rssi_dbm is not None else None
+            ),
         )
 
 # wasserleser device
