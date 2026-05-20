@@ -34,7 +34,7 @@ packages = [{ include = "energieleser" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-aiohttp = ">=3.9"
+aiohttp = ">=3.9.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3"

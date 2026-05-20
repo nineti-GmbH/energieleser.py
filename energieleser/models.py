@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class DeviceType(StrEnum):
-    """Identifier for the four supported energieleser device families."""
+    """Device type identifier used in API responses and manifests."""
 
     STROMLESER = "stromleser"
     GASLESER = "gasleser"
@@ -70,6 +70,17 @@ def _measurement(payload: Mapping[str, Any], code: str) -> Measurement | None:
     if raw is None:
         return None
     value, unit = _parse_value_unit(raw)
+    return Measurement(value=value, unit=unit)
+
+
+def _safe_measurement(payload: Mapping[str, Any], code: str) -> Measurement | None:
+    raw = payload.get(code)
+    if not isinstance(raw, str):
+        return None
+    try:
+        value, unit = _parse_value_unit(raw)
+    except (ValueError, IndexError):
+        return None
     return Measurement(value=value, unit=unit)
 
 
@@ -182,25 +193,44 @@ class GasleserDevice(EnergieleserDevice):
             current_flow_rate=float(flow) if flow is not None else None,
         )
 
+# wasserleser device
+_WASSERLESER_READINGS: dict[str, str] = {
+    "total_consumption": "total_consumption",
+    "today_consumption": "today_consumption",
+    "current_flow_rate": "current_flow_rate",
+    "current_flow_rate_m3": "current_flow_rate_m3",
+}
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class WasserleserDevice(EnergieleserDevice):
-    """Parsed response for a wasserleser (water meter).
+    """Parsed response for a wasserleser (water meter)."""
 
-    Typed fields are TBD; the full payload is exposed under ``raw`` until the
-    device's response shape is finalised.
-    """
-
-    raw: Mapping[str, Any]
+    total_consumption: Measurement | None = None
+    today_consumption: Measurement | None = None
+    current_flow_rate: Measurement | None = None
+    current_flow_rate_m3: Measurement | None = None
+    signal_strength_dbm: float | None = None
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> WasserleserDevice:
-        """Build a WasserleserDevice from the raw API JSON."""
+        """Build a WasserleserDevice from whatever fields are present."""
+        fields: dict[str, Any] = {
+            attr: measurement
+            for code, attr in _WASSERLESER_READINGS.items()
+            if (measurement := _safe_measurement(payload, code)) is not None
+        }
+        signal = _safe_measurement(payload, "signal_strength")
+        timestamp_raw = payload.get("timestamp")
+        try:
+            timestamp = int(timestamp_raw) if timestamp_raw is not None else 0
+        except (TypeError, ValueError):
+            timestamp = 0
         return cls(
             device_id=payload["device_id"],
             device_type=DeviceType.WASSERLESER,
-            timestamp=int(payload["timestamp"]),
-            raw=dict(payload),
+            timestamp=timestamp,
+            signal_strength_dbm=signal.value if signal is not None else None,
+            **fields,
         )
 
 

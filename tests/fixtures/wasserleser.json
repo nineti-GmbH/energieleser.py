@@ -1,4 +1,9 @@
 {
-  "device_id": "WASSER_0000000001",
-  "timestamp": "1776180000"
+  "device_id": "WASSER_0499632826",
+  "timestamp": "1779276532",
+  "total_consumption": "123.755 m3",
+  "today_consumption": "0.000 m3",
+  "current_flow_rate": "0 l/h",
+  "current_flow_rate_m3": "0.0000 m3/h",
+  "signal_strength": "-49 dBm"
 }

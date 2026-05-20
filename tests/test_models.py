@@ -84,14 +84,19 @@ def test_gasleser_from_payload(gasleser_payload: dict[str, Any]) -> None:
     assert device.current_flow_rate == pytest.approx(0.01)
 
 
-def test_wasserleser_from_payload_exposes_raw(
+def test_wasserleser_from_payload(
     wasserleser_payload: dict[str, Any],
 ) -> None:
     device = WasserleserDevice.from_payload(wasserleser_payload)
 
     assert device.device_type is DeviceType.WASSERLESER
-    assert device.device_id == "WASSER_0000000001"
-    assert device.raw == wasserleser_payload
+    assert device.device_id == "WASSER_0499632826"
+    assert device.timestamp == 1779276532
+    assert device.total_consumption == Measurement(value=123.755, unit="m3")
+    assert device.today_consumption == Measurement(value=0.0, unit="m3")
+    assert device.current_flow_rate == Measurement(value=0.0, unit="l/h")
+    assert device.current_flow_rate_m3 == Measurement(value=0.0, unit="m3/h")
+    assert device.signal_strength_dbm == -49.0
 
 
 def test_waermeleser_from_payload_exposes_raw(
