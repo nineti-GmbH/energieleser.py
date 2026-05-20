@@ -119,7 +119,7 @@ _STROMLESER_READINGS: dict[str, str] = {
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
-class StromleserDevice(EnergieleserDevice):
+class StromleserOneDevice(EnergieleserDevice):
     """Parsed response for a stromleser (electricity meter).
 
     Every OBIS-derived attribute is optional: meters report a dynamic subset
@@ -148,8 +148,8 @@ class StromleserDevice(EnergieleserDevice):
     signal_strength_dbm: float | None = None
 
     @classmethod
-    def from_payload(cls, payload: Mapping[str, Any]) -> StromleserDevice:
-        """Build a StromleserDevice from whatever OBIS codes are present."""
+    def from_payload(cls, payload: Mapping[str, Any]) -> StromleserOneDevice:
+        """Build a StromleserOneDevice from whatever OBIS codes are present."""
         fields: dict[str, Any] = {
             attr: measurement
             for code, attr in _STROMLESER_READINGS.items()
@@ -256,7 +256,7 @@ class WaermeleserDevice(EnergieleserDevice):
 
 
 _DEVICE_BUILDERS: dict[DeviceType, Callable[[Mapping[str, Any]], EnergieleserDevice]] = {
-    DeviceType.STROMLESER: StromleserDevice.from_payload,
+    DeviceType.STROMLESER: StromleserOneDevice.from_payload,
     DeviceType.GASLESER: GasleserDevice.from_payload,
     DeviceType.WASSERLESER: WasserleserDevice.from_payload,
     DeviceType.WAERMELESER: WaermeleserDevice.from_payload,

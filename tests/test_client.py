@@ -14,7 +14,7 @@ from energieleser import (
     EnergieleserTimeoutError,
     EnergieleserUnknownDeviceError,
     Measurement,
-    StromleserDevice,
+    StromleserOneDevice,
 )
 
 if TYPE_CHECKING:
@@ -33,7 +33,7 @@ async def test_get_device_returns_stromleser(
     async with EnergieleserClient(HOST) as client:
         device = await client.get_device()
 
-    assert isinstance(device, StromleserDevice)
+    assert isinstance(device, StromleserOneDevice)
     assert device.device_type is DeviceType.STROMLESER
     assert device.power_l3 == Measurement(value=8.16, unit="W")
 

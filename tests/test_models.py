@@ -10,7 +10,7 @@ from energieleser import (
     DeviceType,
     GasleserDevice,
     Measurement,
-    StromleserDevice,
+    StromleserOneDevice,
     WaermeleserDevice,
     WasserleserDevice,
     parse_device,
@@ -38,7 +38,7 @@ def test_parse_value_unit_raises_on_garbage() -> None:
 
 
 def test_stromleser_from_payload(stromleser_payload: dict[str, Any]) -> None:
-    device = StromleserDevice.from_payload(stromleser_payload)
+    device = StromleserOneDevice.from_payload(stromleser_payload)
 
     assert device.device_id == "STROM_ONE_8529546829"
     assert device.device_type is DeviceType.STROMLESER
@@ -58,7 +58,7 @@ def test_stromleser_from_payload(stromleser_payload: dict[str, Any]) -> None:
 def test_stromleser_single_phase_omits_per_phase_power(
     stromleser_single_phase_payload: dict[str, Any],
 ) -> None:
-    device = StromleserDevice.from_payload(stromleser_single_phase_payload)
+    device = StromleserOneDevice.from_payload(stromleser_single_phase_payload)
 
     assert device.device_id == "STROM_ONE_2429489063"
     assert device.energy_import == Measurement(value=45.167, unit="kWh")
@@ -112,7 +112,7 @@ def test_waermeleser_from_payload_exposes_raw(
 @pytest.mark.parametrize(
     ("fixture_name", "expected_cls"),
     [
-        ("stromleser_payload", StromleserDevice),
+        ("stromleser_payload", StromleserOneDevice),
         ("gasleser_payload", GasleserDevice),
         ("wasserleser_payload", WasserleserDevice),
         ("waermeleser_payload", WaermeleserDevice),
