@@ -100,14 +100,25 @@ def test_wasserleser_from_payload(
     assert device.signal_strength_dbm == -49.0
 
 
-def test_waermeleser_from_payload_exposes_raw(
+def test_waermeleser_from_payload(
     waermeleser_payload: dict[str, Any],
 ) -> None:
     device = WaermeleserDevice.from_payload(waermeleser_payload)
 
     assert device.device_type is DeviceType.WAERMELESER
     assert device.device_id == "HEAT_0000000001"
-    assert device.raw == waermeleser_payload
+    assert device.timestamp == 1747285200
+    assert device.total_energy_t1 == Measurement(value=34.09, unit="MWh")
+    assert device.total_energy_t2 == Measurement(value=12.45, unit="MWh")
+    assert device.total_energy_t3 == Measurement(value=5.67, unit="MWh")
+    assert device.power == Measurement(value=2.31, unit="kW")
+    assert device.total_volume == Measurement(value=3561.23, unit="m³")
+    assert device.volume_flow == Measurement(value=1.23, unit="l/h")
+    assert device.flow_temperature == Measurement(value=16.90, unit="°C")
+    assert device.return_temperature == Measurement(value=19.60, unit="°C")
+    assert device.temperature_difference == Measurement(value=2.68, unit="K")
+    assert device.fabrication_number == "17580352"
+    assert device.signal_strength_dbm == -51.0
 
 
 @pytest.mark.parametrize(

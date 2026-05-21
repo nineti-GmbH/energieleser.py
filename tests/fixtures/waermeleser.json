@@ -1,4 +1,15 @@
 {
   "device_id": "HEAT_0000000001",
-  "timestamp": "1776180100"
+  "timestamp": 1747285200,
+  "total_energy_t1": "34.09 MWh",
+  "total_energy_t2": "12.45 MWh",
+  "total_energy_t3": "5.67 MWh",
+  "power": "2.31 kW",
+  "total_volume": "3561.23 m³",
+  "volume_flow": "1.23 l/h",
+  "flow_temperature": "16.90 °C",
+  "return_temperature": "19.60 °C",
+  "temperature_difference": "2.68 K",
+  "fabrication_number": "17580352",
+  "rssi": "-51"
 }

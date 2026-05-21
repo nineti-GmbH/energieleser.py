@@ -238,25 +238,56 @@ class WasserleserDevice(EnergieleserDevice):
             **fields,
         )
 
+# waermeleser device
+_WAERMELESER_READINGS: dict[str, str] = {
+    "total_energy_t1": "total_energy_t1",
+    "total_energy_t2": "total_energy_t2",
+    "total_energy_t3": "total_energy_t3",
+    "power": "power",
+    "total_volume": "total_volume",
+    "volume_flow": "volume_flow",
+    "flow_temperature": "flow_temperature",
+    "return_temperature": "return_temperature",
+    "temperature_difference": "temperature_difference",
+}
+
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class WaermeleserDevice(EnergieleserDevice):
-    """Parsed response for a wärmeleser (heat meter).
+    """Parsed response for a wärmeleser (heat meter)."""
 
-    Typed fields are TBD; the full payload is exposed under ``raw`` until the
-    device's response shape is finalised.
-    """
+    total_energy_t1: Measurement | None = None
+    total_energy_t2: Measurement | None = None
+    total_energy_t3: Measurement | None = None
+    power: Measurement | None = None
+    total_volume: Measurement | None = None
+    volume_flow: Measurement | None = None
+    flow_temperature: Measurement | None = None
+    return_temperature: Measurement | None = None
+    temperature_difference: Measurement | None = None
+    fabrication_number: str | None = None
+    signal_strength_dbm: float | None = None
 
-    raw: Mapping[str, Any]
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> WaermeleserDevice:
-        """Build a WaermeleserDevice from the raw API JSON."""
+        """Build a WaermeleserDevice from whatever fields are present."""
+        fields: dict[str, Any] = {
+            attr: measurement
+            for code, attr in _WAERMELESER_READINGS.items()
+            if (measurement := _safe_measurement(payload, code)) is not None
+        }
+        rssi_dbm = payload.get("rssi")
+
         return cls(
             device_id=payload["device_id"],
             device_type=DeviceType.WAERMELESER,
             timestamp=int(payload["timestamp"]),
-            raw=dict(payload),
+            fabrication_number=payload.get("fabrication_number"),
+            signal_strength_dbm=(
+                _parse_value_unit(rssi_dbm)[0] if rssi_dbm is not None else None
+            ),
+            **fields,
         )
 
 
