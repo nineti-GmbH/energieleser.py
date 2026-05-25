@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
@@ -11,6 +12,7 @@ from energieleser.exceptions import EnergieleserUnknownDeviceError
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
+_LOGGER = logging.getLogger(__name__)
 
 class DeviceType(StrEnum):
     """Device type identifier used in API responses and manifests."""
@@ -69,17 +71,34 @@ def _measurement(payload: Mapping[str, Any], code: str) -> Measurement | None:
     raw = payload.get(code)
     if raw is None:
         return None
-    value, unit = _parse_value_unit(raw)
+    try:
+        value, unit = _parse_value_unit(raw)
+    except (ValueError, IndexError):
+        _LOGGER.debug("Failed to parse field '%s': %s", code, raw)
+        return None
     return Measurement(value=value, unit=unit)
 
 
 def _safe_measurement(payload: Mapping[str, Any], code: str) -> Measurement | None:
     raw = payload.get(code)
+    if raw is None:
+        return None
     if not isinstance(raw, str):
+        _LOGGER.debug("Field '%s' expected string, got %s: %s", code, type(raw), raw)
         return None
     try:
         value, unit = _parse_value_unit(raw)
+        if not unit:
+            device_id = payload.get("device_id", "unknown")
+            _LOGGER.warning(
+                "Device '%s' reported unitless measurement for '%s': %s",
+                device_id,
+                code,
+                value,
+            )
+
     except (ValueError, IndexError):
+        _LOGGER.debug("Failed to parse field '%s': %s", code, raw)
         return None
     return Measurement(value=value, unit=unit)
 

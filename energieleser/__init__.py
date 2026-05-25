@@ -1,5 +1,7 @@
 """Async Python client for energieleser devices."""
 
+import logging
+
 from energieleser.client import EnergieleserClient
 from energieleser.exceptions import (
     EnergieleserConnectionError,
@@ -37,3 +39,5 @@ __all__ = [
     "detect_device_type",
     "parse_device",
 ]
+
+logging.getLogger(__name__).addHandler(logging.NullHandler())
