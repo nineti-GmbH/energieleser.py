@@ -90,7 +90,7 @@ def _safe_measurement(payload: Mapping[str, Any], code: str) -> Measurement | No
         value, unit = _parse_value_unit(raw)
         if not unit:
             device_id = payload.get("device_id", "unknown")
-            _LOGGER.warning(
+            _LOGGER.debug(
                 "Device '%s' reported unitless measurement for '%s': %s",
                 device_id,
                 code,
