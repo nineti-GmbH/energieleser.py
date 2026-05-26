@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
@@ -11,6 +12,7 @@ from energieleser.exceptions import EnergieleserUnknownDeviceError
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
+_LOGGER = logging.getLogger(__name__)
 
 class DeviceType(StrEnum):
     """Device type identifier used in API responses and manifests."""
@@ -69,19 +71,59 @@ def _measurement(payload: Mapping[str, Any], code: str) -> Measurement | None:
     raw = payload.get(code)
     if raw is None:
         return None
-    value, unit = _parse_value_unit(raw)
+    try:
+        value, unit = _parse_value_unit(raw)
+    except (ValueError, IndexError):
+        _LOGGER.debug("Failed to parse field '%s': %s", code, raw)
+        return None
     return Measurement(value=value, unit=unit)
 
 
 def _safe_measurement(payload: Mapping[str, Any], code: str) -> Measurement | None:
     raw = payload.get(code)
+    if raw is None:
+        return None
     if not isinstance(raw, str):
+        _LOGGER.debug("Field '%s' expected string, got %s: %s", code, type(raw), raw)
         return None
     try:
         value, unit = _parse_value_unit(raw)
+        if not unit:
+            device_id = payload.get("device_id", "unknown")
+            _LOGGER.debug(
+                "Device '%s' reported unitless measurement for '%s': %s",
+                device_id,
+                code,
+                value,
+            )
+
     except (ValueError, IndexError):
+        _LOGGER.debug("Failed to parse field '%s': %s", code, raw)
         return None
     return Measurement(value=value, unit=unit)
+
+
+def _parse_rssi_dbm(payload: Mapping[str, Any]) -> float | None:
+    """Safely extract RSSI dBm value from payload.
+
+    Returns None if rssi field is missing, not a valid number/string, or malformed.
+    """
+    rssi_raw = payload.get("rssi")
+    if rssi_raw is None:
+        return None
+    if isinstance(rssi_raw, (int, float)):
+        return float(rssi_raw)
+    if not isinstance(rssi_raw, str):
+        _LOGGER.debug(
+            "RSSI expected string or number, got %s: %s", type(rssi_raw).__name__, rssi_raw
+        )
+        return None
+    try:
+        value, _ = _parse_value_unit(rssi_raw)
+    except (ValueError, IndexError):
+        _LOGGER.debug("Failed to parse RSSI: %s", rssi_raw)
+        return None
+    return value
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
@@ -158,14 +200,11 @@ class StromleserOneDevice(EnergieleserDevice):
         # "16.7" is a firmware alias for "16.7.0"; only used as a fallback.
         if "power_active" not in fields and (alias := _measurement(payload, "16.7")):
             fields["power_active"] = alias
-        rssi_dbm = payload.get("rssi")
         return cls(
             device_id=payload["device_id"],
             device_type=DeviceType.STROMLESER,
             timestamp=int(payload["timestamp"]),
-            signal_strength_dbm=(
-                _parse_value_unit(rssi_dbm)[0] if rssi_dbm is not None else None
-            ),
+            signal_strength_dbm=_parse_rssi_dbm(payload),
             **fields,
         )
 
@@ -177,6 +216,7 @@ class GasleserDevice(EnergieleserDevice):
     count: int | None = None
     total_consumption: float | None = None
     current_flow_rate: float | None = None
+    signal_strength_dbm: float | None = None
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> GasleserDevice:
@@ -191,6 +231,7 @@ class GasleserDevice(EnergieleserDevice):
             count=int(count) if count is not None else None,
             total_consumption=float(total) if total is not None else None,
             current_flow_rate=float(flow) if flow is not None else None,
+            signal_strength_dbm=_parse_rssi_dbm(payload),
         )
 
 # wasserleser device
@@ -233,25 +274,58 @@ class WasserleserDevice(EnergieleserDevice):
             **fields,
         )
 
+# waermeleser device
+_WAERMELESER_READINGS: dict[str, str] = {
+    "total_energy_t1": "total_energy_t1",
+    "total_energy_t2": "total_energy_t2",
+    "total_energy_t3": "total_energy_t3",
+    "power": "power",
+    "total_volume": "total_volume",
+    "volume_flow": "volume_flow",
+    "flow_temperature": "flow_temperature",
+    "return_temperature": "return_temperature",
+    "temperature_difference": "temperature_difference",
+}
+
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class WaermeleserDevice(EnergieleserDevice):
-    """Parsed response for a wärmeleser (heat meter).
+    """Parsed response for a wärmeleser (heat meter)."""
 
-    Typed fields are TBD; the full payload is exposed under ``raw`` until the
-    device's response shape is finalised.
-    """
+    total_energy_t1: Measurement | None = None
+    total_energy_t2: Measurement | None = None
+    total_energy_t3: Measurement | None = None
+    power: Measurement | None = None
+    total_volume: Measurement | None = None
+    volume_flow: Measurement | None = None
+    flow_temperature: Measurement | None = None
+    return_temperature: Measurement | None = None
+    temperature_difference: Measurement | None = None
+    fabrication_number: str | None = None
+    signal_strength_dbm: float | None = None
 
-    raw: Mapping[str, Any]
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> WaermeleserDevice:
-        """Build a WaermeleserDevice from the raw API JSON."""
+        """Build a WaermeleserDevice from whatever fields are present."""
+        fields: dict[str, Any] = {
+            attr: measurement
+            for code, attr in _WAERMELESER_READINGS.items()
+            if (measurement := _safe_measurement(payload, code)) is not None
+        }
+        timestamp_raw = payload.get("timestamp")
+        try:
+            timestamp = int(timestamp_raw) if timestamp_raw is not None else 0
+        except (TypeError, ValueError):
+            timestamp = 0
+
         return cls(
             device_id=payload["device_id"],
             device_type=DeviceType.WAERMELESER,
-            timestamp=int(payload["timestamp"]),
-            raw=dict(payload),
+            timestamp=timestamp,
+            fabrication_number=payload.get("fabrication_number"),
+            signal_strength_dbm=_parse_rssi_dbm(payload),
+            **fields,
         )
 
 

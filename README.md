@@ -1,5 +1,7 @@
 # energieleser.py
 
+[![PyPI](https://img.shields.io/pypi/v/energieleser.svg)](https://pypi.org/project/energieleser/)
+[![Python](https://img.shields.io/pypi/pyversions/energieleser.svg)](https://pypi.org/project/energieleser/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > Async Python client for energieleser smart meter devices.
@@ -57,6 +59,7 @@ More examples in [docs/usage.md](docs/usage.md).
 
 ## Links
 
+- PyPI: https://pypi.org/project/energieleser/
 - Repository: https://github.com/nineti-GmbH/energieleser.py
 - Issue tracker: https://github.com/nineti-GmbH/energieleser.py/issues
 - Homepage: https://energieleser.de

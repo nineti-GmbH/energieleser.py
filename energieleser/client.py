@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import TYPE_CHECKING, Any, Self
 
 import aiohttp
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
 
 DEFAULT_PORT = 80
 
+_LOGGER = logging.getLogger(__name__)
 
 class EnergieleserClient:
     """Async client for an energieleser device's local HTTP API."""
@@ -44,6 +46,8 @@ class EnergieleserClient:
         self._session = session
         self._owns_session = session is None
 
+        _LOGGER.debug("Initialized client for %s:%s", self._host, self._port)
+
     @property
     def base_url(self) -> str:
         """Return the device's JSON data endpoint URL.
@@ -66,13 +70,27 @@ class EnergieleserClient:
                 response = await session.get(self.base_url)
                 response.raise_for_status()
                 payload: dict[str, Any] = await response.json()
+                _LOGGER.debug("Received data from device: %s", payload)
         except TimeoutError as err:
+            _LOGGER.debug("Timed out reading %s", self._host)
             msg = f"Timed out reading {self.base_url}"
             raise EnergieleserTimeoutError(msg) from err
         except ClientError as err:
+            _LOGGER.debug("Error connecting to %s: %s", self._host, err)
             msg = f"Failed to reach {self.base_url}: {err}"
             raise EnergieleserConnectionError(msg) from err
-        return parse_device(payload)
+
+        try:
+            device = parse_device(payload)
+        except Exception:
+            _LOGGER.exception(
+                "Failed to parse device payload from %s.",
+                self._host,
+            )
+            raise
+
+        _LOGGER.debug("Successfully parsed %s device: %s", device.device_id, device)
+        return device
 
     async def close(self) -> None:
         """Close the internally-owned session, if any."""
