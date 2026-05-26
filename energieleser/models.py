@@ -111,7 +111,7 @@ def _parse_rssi_dbm(payload: Mapping[str, Any]) -> float | None:
     rssi_raw = payload.get("rssi")
     if rssi_raw is None:
         return None
-    if isinstance(rssi_raw, (int, float)):
+    if isinstance(rssi_raw, int | float):
         return float(rssi_raw)
     if not isinstance(rssi_raw, str):
         _LOGGER.debug(
