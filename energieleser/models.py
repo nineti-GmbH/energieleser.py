@@ -103,6 +103,29 @@ def _safe_measurement(payload: Mapping[str, Any], code: str) -> Measurement | No
     return Measurement(value=value, unit=unit)
 
 
+def _parse_rssi_dbm(payload: Mapping[str, Any]) -> float | None:
+    """Safely extract RSSI dBm value from payload.
+
+    Returns None if rssi field is missing, not a valid number/string, or malformed.
+    """
+    rssi_raw = payload.get("rssi")
+    if rssi_raw is None:
+        return None
+    if isinstance(rssi_raw, (int, float)):
+        return float(rssi_raw)
+    if not isinstance(rssi_raw, str):
+        _LOGGER.debug(
+            "RSSI expected string or number, got %s: %s", type(rssi_raw).__name__, rssi_raw
+        )
+        return None
+    try:
+        value, _ = _parse_value_unit(rssi_raw)
+    except (ValueError, IndexError):
+        _LOGGER.debug("Failed to parse RSSI: %s", rssi_raw)
+        return None
+    return value
+
+
 @dataclass(frozen=True, kw_only=True, slots=True)
 class EnergieleserDevice:
     """Base type for a parsed device response."""
@@ -177,14 +200,11 @@ class StromleserOneDevice(EnergieleserDevice):
         # "16.7" is a firmware alias for "16.7.0"; only used as a fallback.
         if "power_active" not in fields and (alias := _measurement(payload, "16.7")):
             fields["power_active"] = alias
-        rssi_dbm = payload.get("rssi")
         return cls(
             device_id=payload["device_id"],
             device_type=DeviceType.STROMLESER,
             timestamp=int(payload["timestamp"]),
-            signal_strength_dbm=(
-                _parse_value_unit(rssi_dbm)[0] if rssi_dbm is not None else None
-            ),
+            signal_strength_dbm=_parse_rssi_dbm(payload),
             **fields,
         )
 
@@ -204,7 +224,6 @@ class GasleserDevice(EnergieleserDevice):
         count = payload.get("count")
         total = payload.get("total_consumption")
         flow = payload.get("current_flow_rate")
-        rssi_dbm = payload.get("rssi")
         return cls(
             device_id=payload["device_id"],
             device_type=DeviceType.GASLESER,
@@ -212,9 +231,7 @@ class GasleserDevice(EnergieleserDevice):
             count=int(count) if count is not None else None,
             total_consumption=float(total) if total is not None else None,
             current_flow_rate=float(flow) if flow is not None else None,
-            signal_strength_dbm=(
-                _parse_value_unit(rssi_dbm)[0] if rssi_dbm is not None else None
-            ),
+            signal_strength_dbm=_parse_rssi_dbm(payload),
         )
 
 # wasserleser device
@@ -296,16 +313,18 @@ class WaermeleserDevice(EnergieleserDevice):
             for code, attr in _WAERMELESER_READINGS.items()
             if (measurement := _safe_measurement(payload, code)) is not None
         }
-        rssi_dbm = payload.get("rssi")
+        timestamp_raw = payload.get("timestamp")
+        try:
+            timestamp = int(timestamp_raw) if timestamp_raw is not None else 0
+        except (TypeError, ValueError):
+            timestamp = 0
 
         return cls(
             device_id=payload["device_id"],
             device_type=DeviceType.WAERMELESER,
-            timestamp=int(payload["timestamp"]),
+            timestamp=timestamp,
             fabrication_number=payload.get("fabrication_number"),
-            signal_strength_dbm=(
-                _parse_value_unit(rssi_dbm)[0] if rssi_dbm is not None else None
-            ),
+            signal_strength_dbm=_parse_rssi_dbm(payload),
             **fields,
         )
 
