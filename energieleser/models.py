@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+
 class DeviceType(StrEnum):
     """Device type identifier used in API responses and manifests."""
 
@@ -66,20 +67,10 @@ def _measurement(payload: Mapping[str, Any], code: str) -> Measurement | None:
     """Parse one ``"value unit"`` field, ``None`` when the code is absent.
 
     Meters emit a dynamic subset of the OBIS schema depending on model and
-    firmware configuration, so every code is treated as optional.
+    firmware configuration, so every code is treated as optional. Missing,
+    non-string, or unparseable values are logged at debug level and treated as
+    absent rather than raising.
     """
-    raw = payload.get(code)
-    if raw is None:
-        return None
-    try:
-        value, unit = _parse_value_unit(raw)
-    except (ValueError, IndexError):
-        _LOGGER.debug("Failed to parse field '%s': %s", code, raw)
-        return None
-    return Measurement(value=value, unit=unit)
-
-
-def _safe_measurement(payload: Mapping[str, Any], code: str) -> Measurement | None:
     raw = payload.get(code)
     if raw is None:
         return None
@@ -88,18 +79,17 @@ def _safe_measurement(payload: Mapping[str, Any], code: str) -> Measurement | No
         return None
     try:
         value, unit = _parse_value_unit(raw)
-        if not unit:
-            device_id = payload.get("device_id", "unknown")
-            _LOGGER.debug(
-                "Device '%s' reported unitless measurement for '%s': %s",
-                device_id,
-                code,
-                value,
-            )
-
     except (ValueError, IndexError):
         _LOGGER.debug("Failed to parse field '%s': %s", code, raw)
         return None
+    if not unit:
+        device_id = payload.get("device_id", "unknown")
+        _LOGGER.debug(
+            "Device '%s' reported unitless measurement for '%s': %s",
+            device_id,
+            code,
+            value,
+        )
     return Measurement(value=value, unit=unit)
 
 
@@ -234,13 +224,14 @@ class GasleserDevice(EnergieleserDevice):
             signal_strength_dbm=_parse_rssi_dbm(payload),
         )
 
-# wasserleser device
-_WASSERLESER_READINGS: dict[str, str] = {
-    "total_consumption": "total_consumption",
-    "today_consumption": "today_consumption",
-    "current_flow_rate": "current_flow_rate",
-    "current_flow_rate_m3": "current_flow_rate_m3",
-}
+
+_WASSERLESER_FIELDS = (
+    "total_consumption",
+    "today_consumption",
+    "current_flow_rate",
+    "current_flow_rate_m3",
+)
+
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class WasserleserDevice(EnergieleserDevice):
@@ -256,36 +247,31 @@ class WasserleserDevice(EnergieleserDevice):
     def from_payload(cls, payload: Mapping[str, Any]) -> WasserleserDevice:
         """Build a WasserleserDevice from whatever fields are present."""
         fields: dict[str, Any] = {
-            attr: measurement
-            for code, attr in _WASSERLESER_READINGS.items()
-            if (measurement := _safe_measurement(payload, code)) is not None
+            name: measurement
+            for name in _WASSERLESER_FIELDS
+            if (measurement := _measurement(payload, name)) is not None
         }
-        signal = _safe_measurement(payload, "signal_strength")
-        timestamp_raw = payload.get("timestamp")
-        try:
-            timestamp = int(timestamp_raw) if timestamp_raw is not None else 0
-        except (TypeError, ValueError):
-            timestamp = 0
+        signal = _measurement(payload, "signal_strength")
         return cls(
             device_id=payload["device_id"],
             device_type=DeviceType.WASSERLESER,
-            timestamp=timestamp,
+            timestamp=int(payload["timestamp"]),
             signal_strength_dbm=signal.value if signal is not None else None,
             **fields,
         )
 
-# waermeleser device
-_WAERMELESER_READINGS: dict[str, str] = {
-    "total_energy_t1": "total_energy_t1",
-    "total_energy_t2": "total_energy_t2",
-    "total_energy_t3": "total_energy_t3",
-    "power": "power",
-    "total_volume": "total_volume",
-    "volume_flow": "volume_flow",
-    "flow_temperature": "flow_temperature",
-    "return_temperature": "return_temperature",
-    "temperature_difference": "temperature_difference",
-}
+
+_WAERMELESER_FIELDS = (
+    "total_energy_t1",
+    "total_energy_t2",
+    "total_energy_t3",
+    "power",
+    "total_volume",
+    "volume_flow",
+    "flow_temperature",
+    "return_temperature",
+    "temperature_difference",
+)
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
@@ -304,25 +290,18 @@ class WaermeleserDevice(EnergieleserDevice):
     fabrication_number: str | None = None
     signal_strength_dbm: float | None = None
 
-
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> WaermeleserDevice:
         """Build a WaermeleserDevice from whatever fields are present."""
         fields: dict[str, Any] = {
-            attr: measurement
-            for code, attr in _WAERMELESER_READINGS.items()
-            if (measurement := _safe_measurement(payload, code)) is not None
+            name: measurement
+            for name in _WAERMELESER_FIELDS
+            if (measurement := _measurement(payload, name)) is not None
         }
-        timestamp_raw = payload.get("timestamp")
-        try:
-            timestamp = int(timestamp_raw) if timestamp_raw is not None else 0
-        except (TypeError, ValueError):
-            timestamp = 0
-
         return cls(
             device_id=payload["device_id"],
             device_type=DeviceType.WAERMELESER,
-            timestamp=timestamp,
+            timestamp=int(payload["timestamp"]),
             fabrication_number=payload.get("fabrication_number"),
             signal_strength_dbm=_parse_rssi_dbm(payload),
             **fields,
