@@ -22,6 +22,7 @@ DEFAULT_PORT = 80
 
 _LOGGER = logging.getLogger(__name__)
 
+
 class EnergieleserClient:
     """Async client for an energieleser device's local HTTP API."""
 
@@ -55,11 +56,7 @@ class EnergieleserClient:
         The port is omitted when it is the HTTP default (80), so the URL
         matches the device's advertised address exactly.
         """
-        host = (
-            self._host
-            if self._port == DEFAULT_PORT
-            else f"{self._host}:{self._port}"
-        )
+        host = self._host if self._port == DEFAULT_PORT else f"{self._host}:{self._port}"
         return f"http://{host}/v1/data"
 
     async def get_device(self) -> EnergieleserDevice:

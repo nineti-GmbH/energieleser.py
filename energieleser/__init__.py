@@ -1,6 +1,7 @@
 """Async Python client for energieleser devices."""
 
 import logging
+from importlib.metadata import PackageNotFoundError, version
 
 from energieleser.client import EnergieleserClient
 from energieleser.exceptions import (
@@ -21,7 +22,11 @@ from energieleser.models import (
     parse_device,
 )
 
-__version__ = "0.1.0"
+try:
+    __version__ = version(__name__)
+except PackageNotFoundError:  # pragma: no cover
+    # Running from a source tree without an installed distribution.
+    __version__ = "0.0.0"
 
 __all__ = [
     "DeviceType",
