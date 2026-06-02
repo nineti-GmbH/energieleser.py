@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/energieleser.svg)](https://pypi.org/project/energieleser/)
 [![Python](https://img.shields.io/pypi/pyversions/energieleser.svg)](https://pypi.org/project/energieleser/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/nineti-GmbH/energieleser.py/blob/main/LICENSE)
 
 > Async Python client for energieleser smart meter devices.
 
@@ -26,7 +26,7 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-More examples in [docs/usage.md](docs/usage.md).
+More examples in [docs/usage.md](https://github.com/nineti-GmbH/energieleser.py/blob/main/docs/usage.md).
 
 ## Features
 
@@ -50,12 +50,12 @@ More examples in [docs/usage.md](docs/usage.md).
 
 ## Documentation
 
-- [Usage](docs/usage.md) — examples, shared sessions
-- [Supported devices](docs/devices.md) — device families, fields
-- [Exceptions](docs/exceptions.md) — exception hierarchy
-- [Development](docs/development.md) — local setup, lint, tests
-- [Publishing](docs/publishing.md) — release workflow
-- [Contributing](docs/contributing.md) — how to contribute
+- [Usage](https://github.com/nineti-GmbH/energieleser.py/blob/main/docs/usage.md) — examples, shared sessions
+- [Supported devices](https://github.com/nineti-GmbH/energieleser.py/blob/main/docs/devices.md) — device families, fields
+- [Exceptions](https://github.com/nineti-GmbH/energieleser.py/blob/main/docs/exceptions.md) — exception hierarchy
+- [Development](https://github.com/nineti-GmbH/energieleser.py/blob/main/docs/development.md) — local setup, lint, tests
+- [Publishing](https://github.com/nineti-GmbH/energieleser.py/blob/main/docs/publishing.md) — release workflow
+- [Contributing](https://github.com/nineti-GmbH/energieleser.py/blob/main/docs/contributing.md) — how to contribute
 
 ## Links
 
@@ -66,6 +66,6 @@ More examples in [docs/usage.md](docs/usage.md).
 
 ## Licensing
 
-The code in this project is licensed under the MIT license — see [LICENSE](LICENSE).
+The code in this project is licensed under the MIT license — see [LICENSE](https://github.com/nineti-GmbH/energieleser.py/blob/main/LICENSE).
 
 © [nineti GmbH](https://energieleser.de)
