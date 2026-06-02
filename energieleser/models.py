@@ -32,6 +32,26 @@ _PREFIX_MAP: dict[str, DeviceType] = {
     "HEAT": DeviceType.WAERMELESER,
 }
 
+_CUMULATIVE_FIELDS: set[tuple[DeviceType, str]] = {
+    (DeviceType.STROMLESER, "1.8.0"),
+    (DeviceType.STROMLESER, "1.8.1"),
+    (DeviceType.STROMLESER, "1.8.2"),
+    (DeviceType.STROMLESER, "1.8.3"),
+    (DeviceType.STROMLESER, "1.8.4"),
+    (DeviceType.STROMLESER, "2.8.0"),
+    (DeviceType.STROMLESER, "2.8.1"),
+    (DeviceType.STROMLESER, "2.8.2"),
+    (DeviceType.STROMLESER, "2.8.3"),
+    (DeviceType.STROMLESER, "2.8.4"),
+    (DeviceType.GASLESER, "total_consumption"),
+    (DeviceType.WASSERLESER, "total_consumption"),
+    (DeviceType.WAERMELESER, "total_energy_t1"),
+    (DeviceType.WAERMELESER, "total_energy_t2"),
+    (DeviceType.WAERMELESER, "total_energy_t3"),
+    (DeviceType.WAERMELESER, "total_volume"),
+}
+
+
 
 def detect_device_type(device_id: str) -> DeviceType:
     """Return the DeviceType matching the *device_id* prefix.
@@ -186,11 +206,16 @@ class StromleserOneDevice(EnergieleserDevice):
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> StromleserOneDevice:
         """Build a StromleserOneDevice from whatever OBIS codes are present."""
-        fields: dict[str, Any] = {
-            attr: measurement
-            for code, attr in _STROMLESER_READINGS.items()
-            if (measurement := _measurement(payload, code)) is not None
-        }
+        fields: dict[str, Any] = {}
+        for code, attr in _STROMLESER_READINGS.items():
+            if (measurement := _measurement(payload, code)) is not None:
+                if (
+                    measurement.value == 0.0
+                    and (DeviceType.STROMLESER, code) in _CUMULATIVE_FIELDS
+                ):
+                    continue
+
+                fields[attr] = measurement
         # "16.7" is a firmware alias for "16.7.0"; only used as a fallback.
         if "power_active" not in fields and (alias := _measurement(payload, "16.7")):
             fields["power_active"] = alias
@@ -218,12 +243,23 @@ class GasleserDevice(EnergieleserDevice):
         count = payload.get("count")
         total = payload.get("total_consumption")
         flow = payload.get("current_flow_rate")
+
+        total_consumption: float | None = None
+        if total is not None:
+            total_val = float(total)
+            if not (
+                total_val == 0.0
+                and (DeviceType.GASLESER, "total_consumption") in _CUMULATIVE_FIELDS
+            ):
+                total_consumption = total_val
+
+
         return cls(
             device_id=payload["device_id"],
             device_type=DeviceType.GASLESER,
             timestamp=int(payload["timestamp"]),
             count=int(count) if count is not None else None,
-            total_consumption=float(total) if total is not None else None,
+            total_consumption=total_consumption,
             current_flow_rate=float(flow) if flow is not None else None,
             signal_strength_dbm=_parse_rssi_dbm(payload),
         )
@@ -250,11 +286,16 @@ class WasserleserDevice(EnergieleserDevice):
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> WasserleserDevice:
         """Build a WasserleserDevice from whatever fields are present."""
-        fields: dict[str, Any] = {
-            name: measurement
-            for name in _WASSERLESER_FIELDS
-            if (measurement := _measurement(payload, name)) is not None
-        }
+        fields: dict[str, Any] = {}
+        for name in _WASSERLESER_FIELDS:
+            if (measurement := _measurement(payload, name)) is not None:
+                if (
+                    measurement.value == 0.0
+                    and (DeviceType.WASSERLESER, name) in _CUMULATIVE_FIELDS
+                ):
+                    continue
+
+                fields[name] = measurement
         signal = _measurement(payload, "signal_strength")
         return cls(
             device_id=payload["device_id"],
@@ -297,11 +338,15 @@ class WaermeleserDevice(EnergieleserDevice):
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> WaermeleserDevice:
         """Build a WaermeleserDevice from whatever fields are present."""
-        fields: dict[str, Any] = {
-            name: measurement
-            for name in _WAERMELESER_FIELDS
-            if (measurement := _measurement(payload, name)) is not None
-        }
+        fields: dict[str, Any] = {}
+        for name in _WAERMELESER_FIELDS:
+            if (measurement := _measurement(payload, name)) is not None:
+                if (
+                    measurement.value == 0.0
+                    and (DeviceType.WAERMELESER, name) in _CUMULATIVE_FIELDS
+                ):
+                    continue
+                fields[name] = measurement
         return cls(
             device_id=payload["device_id"],
             device_type=DeviceType.WAERMELESER,
