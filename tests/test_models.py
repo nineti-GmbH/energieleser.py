@@ -8,6 +8,7 @@ import pytest
 
 from energieleser import (
     DeviceType,
+    EnergieleserUnknownDeviceError,
     GasleserDevice,
     Measurement,
     StromleserOneDevice,
@@ -138,3 +139,10 @@ def test_parse_device_dispatches_by_prefix(
     payload = request.getfixturevalue(fixture_name)
     device = parse_device(payload)
     assert isinstance(device, expected_cls)
+
+
+def test_parse_device_missing_device_id_raises() -> None:
+    with pytest.raises(EnergieleserUnknownDeviceError) as excinfo:
+        parse_device({"timestamp": 12345})
+    assert excinfo.value.device_id == "unknown"
+

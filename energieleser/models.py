@@ -318,5 +318,10 @@ _DEVICE_BUILDERS: dict[DeviceType, Callable[[Mapping[str, Any]], EnergieleserDev
 
 def parse_device(payload: Mapping[str, Any]) -> EnergieleserDevice:
     """Detect the device type from *payload* and return its typed dataclass."""
-    device_type = detect_device_type(payload["device_id"])
+    try:
+        device_id = payload["device_id"]
+    except KeyError as err:
+        raise EnergieleserUnknownDeviceError("unknown") from err  # noqa: EM101
+    device_type = detect_device_type(device_id)
     return _DEVICE_BUILDERS[device_type](payload)
+
