@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
 _LOGGER = logging.getLogger(__name__)
+_LOGGED_UNITLESS: set[tuple[str, str]] = set()
 
 
 class DeviceType(StrEnum):
@@ -75,7 +76,7 @@ def _measurement(payload: Mapping[str, Any], code: str) -> Measurement | None:
     if raw is None:
         return None
     if not isinstance(raw, str):
-        _LOGGER.debug("Field '%s' expected string, got %s: %s", code, type(raw), raw)
+        _LOGGER.debug("Field '%s' expected string, got %s: %s", code, type(raw).__name__, raw)
         return None
     try:
         value, unit = _parse_value_unit(raw)
@@ -84,12 +85,15 @@ def _measurement(payload: Mapping[str, Any], code: str) -> Measurement | None:
         return None
     if not unit:
         device_id = payload.get("device_id", "unknown")
-        _LOGGER.debug(
-            "Device '%s' reported unitless measurement for '%s': %s",
-            device_id,
-            code,
-            value,
-        )
+        key = (device_id, code)
+        if key not in _LOGGED_UNITLESS:
+            _LOGGED_UNITLESS.add(key)
+            _LOGGER.debug(
+                "Device '%s' reported unitless measurement for '%s': %s",
+                device_id,
+                code,
+                value,
+            )
     return Measurement(value=value, unit=unit)
 
 

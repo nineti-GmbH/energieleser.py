@@ -7,6 +7,7 @@ from energieleser.client import EnergieleserClient
 from energieleser.exceptions import (
     EnergieleserConnectionError,
     EnergieleserError,
+    EnergieleserParsingError,
     EnergieleserTimeoutError,
     EnergieleserUnknownDeviceError,
 )
@@ -34,6 +35,7 @@ __all__ = [
     "EnergieleserConnectionError",
     "EnergieleserDevice",
     "EnergieleserError",
+    "EnergieleserParsingError",
     "EnergieleserTimeoutError",
     "EnergieleserUnknownDeviceError",
     "GasleserDevice",

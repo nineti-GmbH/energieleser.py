@@ -22,3 +22,7 @@ class EnergieleserUnknownDeviceError(EnergieleserError):
         """Store *device_id* and build a human-readable message."""
         super().__init__(f"Unknown device id prefix: {device_id}")
         self.device_id = device_id
+
+
+class EnergieleserParsingError(EnergieleserError):
+    """Raised when the device payload is malformed or cannot be parsed."""
