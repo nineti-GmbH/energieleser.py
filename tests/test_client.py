@@ -11,6 +11,7 @@ from energieleser import (
     DeviceType,
     EnergieleserClient,
     EnergieleserConnectionError,
+    EnergieleserParsingError,
     EnergieleserTimeoutError,
     EnergieleserUnknownDeviceError,
     Measurement,
@@ -98,6 +99,16 @@ async def test_get_device_raises_unknown_device_for_bad_prefix(
 
     async with EnergieleserClient(HOST) as client:
         with pytest.raises(EnergieleserUnknownDeviceError):
+            await client.get_device()
+
+
+async def test_get_device_raises_parsing_error_for_malformed_payload(
+    mock_http: aioresponses,
+) -> None:
+    mock_http.get(BASE_URL, payload={"device_id": "STROM_ONE_8529546829"})
+
+    async with EnergieleserClient(HOST) as client:
+        with pytest.raises(EnergieleserParsingError):
             await client.get_device()
 
 

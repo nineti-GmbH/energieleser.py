@@ -8,6 +8,7 @@ import pytest
 
 from energieleser import (
     DeviceType,
+    EnergieleserUnknownDeviceError,
     GasleserDevice,
     Measurement,
     StromleserOneDevice,
@@ -138,3 +139,74 @@ def test_parse_device_dispatches_by_prefix(
     payload = request.getfixturevalue(fixture_name)
     device = parse_device(payload)
     assert isinstance(device, expected_cls)
+
+
+def test_parse_device_missing_device_id_raises() -> None:
+    with pytest.raises(EnergieleserUnknownDeviceError) as excinfo:
+        parse_device({"timestamp": 12345})
+    assert excinfo.value.device_id == "unknown"
+
+
+def test_zero_cumulative_totals_omitted() -> None:
+    # 1. Stromleser
+    strom_payload = {
+        "device_id": "STROM_ONE_12345",
+        "timestamp": "1776178480",
+        "1.8.0": "0.000 Wh",          # cumulative -> should be skipped
+        "1.8.1": "12.3 Wh",           # cumulative non-zero -> should not be skipped
+        "2.8.0": "0.0 Wh",            # cumulative -> should be skipped
+        "16.7.0": "0.000 W",          # non-cumulative zero -> should not be skipped
+    }
+    strom_device = StromleserOneDevice.from_payload(strom_payload)
+    assert strom_device.energy_import is None
+    assert strom_device.energy_export is None
+    assert strom_device.energy_import_tariff_1 == Measurement(value=12.3, unit="Wh")
+    assert strom_device.power_active == Measurement(value=0.0, unit="W")
+
+    # 2. Gasleser
+    gas_payload = {
+        "device_id": "GAS_12345",
+        "timestamp": "1776178480",
+        "count": 10,
+        "total_consumption": 0.0,     # cumulative -> should be skipped
+        "current_flow_rate": 0.0,     # non-cumulative zero -> should not be skipped
+    }
+    gas_device = GasleserDevice.from_payload(gas_payload)
+    assert gas_device.total_consumption is None
+    assert gas_device.count == 10
+    assert gas_device.current_flow_rate == 0.0
+
+    # 3. Wasserleser
+    wasser_payload = {
+        "device_id": "WASSER_12345",
+        "timestamp": "1776178480",
+        "total_consumption": "0.000 m3",   # cumulative -> should be skipped
+        "today_consumption": "0.000 m3",   # non-cumulative zero -> should not be skipped
+        "current_flow_rate": "0 l/h",      # non-cumulative zero -> should not be skipped
+    }
+    wasser_device = WasserleserDevice.from_payload(wasser_payload)
+    assert wasser_device.total_consumption is None
+    assert wasser_device.today_consumption == Measurement(value=0.0, unit="m3")
+    assert wasser_device.current_flow_rate == Measurement(value=0.0, unit="l/h")
+
+    # 4. Waermeleser
+    heat_payload = {
+        "device_id": "HEAT_12345",
+        "timestamp": "1776178480",
+        "total_energy_t1": "0.00 MWh",     # cumulative -> should be skipped
+        "total_energy_t2": "1.23 MWh",     # cumulative non-zero -> should not be skipped
+        "total_energy_t3": "0.00 MWh",     # cumulative -> should be skipped
+        "power": "0.00 kW",                # non-cumulative zero -> should not be skipped
+        "total_volume": "0.00 m³",         # cumulative -> should be skipped
+        "volume_flow": "0.00 l/h",         # non-cumulative zero -> should not be skipped
+    }
+    heat_device = WaermeleserDevice.from_payload(heat_payload)
+    assert heat_device.total_energy_t1 is None
+    assert heat_device.total_energy_t2 == Measurement(value=1.23, unit="MWh")
+    assert heat_device.total_energy_t3 is None
+    assert heat_device.power == Measurement(value=0.0, unit="kW")
+    assert heat_device.total_volume is None
+    assert heat_device.volume_flow == Measurement(value=0.0, unit="l/h")
+
+
+

@@ -11,7 +11,9 @@ from aiohttp import ClientError
 
 from energieleser.exceptions import (
     EnergieleserConnectionError,
+    EnergieleserParsingError,
     EnergieleserTimeoutError,
+    EnergieleserUnknownDeviceError,
 )
 from energieleser.models import EnergieleserDevice, parse_device
 
@@ -79,12 +81,11 @@ class EnergieleserClient:
 
         try:
             device = parse_device(payload)
-        except Exception:
-            _LOGGER.exception(
-                "Failed to parse device payload from %s.",
-                self._host,
-            )
+        except EnergieleserUnknownDeviceError:
             raise
+        except Exception as err:
+            msg = f"Failed to parse device payload: {err}"
+            raise EnergieleserParsingError(msg) from err
 
         _LOGGER.debug("Successfully parsed %s device: %s", device.device_id, device)
         return device
