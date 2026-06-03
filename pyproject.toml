@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "energieleser"
-version = "0.1.2"
+version = "0.1.3"
 description = "Async Python client for energieleser devices (stromleser, gasleser, wasserleser, wärmeleser)."
 authors = ["nineti GmbH <info@energieleser.de>"]
 maintainers = ["Ajinkya Gokhale <ajinkya.gokhale@nineti.de>"]
@@ -34,7 +34,7 @@ packages = [{ include = "energieleser" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-aiohttp = ">=3.9.0"
+aiohttp = ">=3.9,<3.14"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3"
