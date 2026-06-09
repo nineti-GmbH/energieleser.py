@@ -7,13 +7,13 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from aioresponses import aioresponses
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
 def _load_fixture(name: str) -> dict[str, Any]:
-    return json.loads((FIXTURES_DIR / f"{name}.json").read_text(encoding="utf-8"))
+    val: dict[str, Any] = json.loads((FIXTURES_DIR / f"{name}.json").read_text(encoding="utf-8"))
+    return val
 
 
 @pytest.fixture
@@ -44,10 +44,3 @@ def wasserleser_payload() -> dict[str, Any]:
 def waermeleser_payload() -> dict[str, Any]:
     """Return the wärmeleser sample API response."""
     return _load_fixture("waermeleser")
-
-
-@pytest.fixture
-def mock_http() -> Any:
-    """Provide an aioresponses context for mocking outgoing HTTP."""
-    with aioresponses() as mocker:
-        yield mocker
