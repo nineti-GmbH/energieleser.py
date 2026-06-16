@@ -207,6 +207,3 @@ def test_zero_cumulative_totals_omitted() -> None:
     assert heat_device.power == Measurement(value=0.0, unit="kW")
     assert heat_device.total_volume is None
     assert heat_device.volume_flow == Measurement(value=0.0, unit="l/h")
-
-
-
