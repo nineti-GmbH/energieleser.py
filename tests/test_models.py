@@ -122,6 +122,21 @@ def test_waermeleser_from_payload(
     assert device.signal_strength_dbm == -51.0
 
 
+def test_waermeleser_drops_temperature_sentinel(
+    waermeleser_payload: dict[str, Any],
+) -> None:
+    payload = {
+        **waermeleser_payload,
+        "flow_temperature": "-327.00 °C",
+        "return_temperature": "-327.00 °C",
+    }
+
+    device = WaermeleserDevice.from_payload(payload)
+
+    assert device.flow_temperature is None
+    assert device.return_temperature is None
+
+
 @pytest.mark.parametrize(
     ("fixture_name", "expected_cls"),
     [
