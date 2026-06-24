@@ -318,6 +318,13 @@ _WAERMELESER_FIELDS = (
     "temperature_difference",
 )
 
+# Heat meters emit -327.00 °C as a sentinel meaning "no temperature available"
+# (sensor disconnected or value not yet measured). Treat such readings as absent.
+_WAERMELESER_TEMPERATURE_FIELDS = frozenset(
+    {"flow_temperature", "return_temperature"}
+)
+_WAERMELESER_TEMPERATURE_SENTINEL = -327.0
+
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class WaermeleserDevice(EnergieleserDevice):
@@ -344,6 +351,11 @@ class WaermeleserDevice(EnergieleserDevice):
                 if (
                     measurement.value == 0.0
                     and (DeviceType.WAERMELESER, name) in _CUMULATIVE_FIELDS
+                ):
+                    continue
+                if (
+                    name in _WAERMELESER_TEMPERATURE_FIELDS
+                    and measurement.value == _WAERMELESER_TEMPERATURE_SENTINEL
                 ):
                     continue
                 fields[name] = measurement
