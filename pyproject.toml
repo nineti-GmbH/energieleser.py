@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "energieleser"
-version = "0.1.4"
+version = "0.1.5"
 description = "Async Python client for energieleser devices (stromleser, gasleser, wasserleser, wärmeleser)."
 authors = ["nineti GmbH <info@energieleser.de>"]
 maintainers = ["Ajinkya Gokhale <ajinkya.gokhale@nineti.de>"]
@@ -57,7 +57,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "D100", "D101", "D102", "D103", "D104", "ANN", "PLR2004"]
+"tests/**/*.py" = ["S101", "D100", "D101", "D102", "D103", "D104", "ANN", "PLR2004", "FBT001"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
