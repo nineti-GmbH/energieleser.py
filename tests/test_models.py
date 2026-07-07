@@ -51,9 +51,32 @@ def test_stromleser_from_payload(stromleser_payload: dict[str, Any]) -> None:
     assert device.power_l2 == Measurement(value=0.0, unit="W")
     assert device.power_l3 == Measurement(value=8.16, unit="W")
     assert device.signal_strength_dbm == -51.0
+    assert device.pin_locked is False
     # Codes the meter did not send stay None instead of raising.
     assert device.energy_import_tariff_1 is None
     assert device.energy_export_tariff_2 is None
+
+
+@pytest.mark.parametrize(
+    ("payload_override", "expected_locked"),
+    [
+        ({}, True),
+        ({"16.7.0": None}, True),
+        ({"16.7.0": "8.160 W"}, False),
+    ],
+)
+def test_stromleser_pin_locked(
+    stromleser_payload: dict[str, Any],
+    payload_override: dict[str, Any],
+    expected_locked: bool,
+) -> None:
+    payload = dict(stromleser_payload)
+    if "16.7.0" in payload_override:
+        payload["16.7.0"] = payload_override["16.7.0"]
+    else:
+        payload.pop("16.7.0", None)
+    device = StromleserOneDevice.from_payload(payload)
+    assert device.pin_locked is expected_locked
 
 
 def test_stromleser_single_phase_omits_per_phase_power(
@@ -120,6 +143,21 @@ def test_waermeleser_from_payload(
     assert device.temperature_difference == Measurement(value=2.68, unit="K")
     assert device.fabrication_number == "17580352"
     assert device.signal_strength_dbm == -51.0
+
+
+def test_waermeleser_drops_temperature_sentinel(
+    waermeleser_payload: dict[str, Any],
+) -> None:
+    payload = {
+        **waermeleser_payload,
+        "flow_temperature": "-327.00 °C",
+        "return_temperature": "-327.00 °C",
+    }
+
+    device = WaermeleserDevice.from_payload(payload)
+
+    assert device.flow_temperature is None
+    assert device.return_temperature is None
 
 
 @pytest.mark.parametrize(

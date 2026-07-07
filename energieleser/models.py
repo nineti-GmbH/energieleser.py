@@ -202,6 +202,7 @@ class StromleserOneDevice(EnergieleserDevice):
     power_l2: Measurement | None = None
     power_l3: Measurement | None = None
     signal_strength_dbm: float | None = None
+    pin_locked: bool = False
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> StromleserOneDevice:
@@ -219,11 +220,13 @@ class StromleserOneDevice(EnergieleserDevice):
         # "16.7" is a firmware alias for "16.7.0"; only used as a fallback.
         if "power_active" not in fields and (alias := _measurement(payload, "16.7")):
             fields["power_active"] = alias
+        pin_locked = "power_active" not in fields
         return cls(
             device_id=payload["device_id"],
             device_type=DeviceType.STROMLESER,
             timestamp=int(payload["timestamp"]),
             signal_strength_dbm=_parse_rssi_dbm(payload),
+            pin_locked=pin_locked,
             **fields,
         )
 
@@ -318,6 +321,13 @@ _WAERMELESER_FIELDS = (
     "temperature_difference",
 )
 
+# Heat meters emit -327.00 °C as a sentinel meaning "no temperature available"
+# (sensor disconnected or value not yet measured). Treat such readings as absent.
+_WAERMELESER_TEMPERATURE_FIELDS = frozenset(
+    {"flow_temperature", "return_temperature"}
+)
+_WAERMELESER_TEMPERATURE_SENTINEL = -327.0
+
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class WaermeleserDevice(EnergieleserDevice):
@@ -344,6 +354,11 @@ class WaermeleserDevice(EnergieleserDevice):
                 if (
                     measurement.value == 0.0
                     and (DeviceType.WAERMELESER, name) in _CUMULATIVE_FIELDS
+                ):
+                    continue
+                if (
+                    name in _WAERMELESER_TEMPERATURE_FIELDS
+                    and measurement.value == _WAERMELESER_TEMPERATURE_SENTINEL
                 ):
                     continue
                 fields[name] = measurement
