@@ -10,6 +10,7 @@ from energieleser import (
     DeviceType,
     EnergieleserUnknownDeviceError,
     GasleserDevice,
+    GasleserPulseDevice,
     Measurement,
     StromleserOneDevice,
     WaermeleserDevice,
@@ -109,6 +110,29 @@ def test_gasleser_from_payload(gasleser_payload: dict[str, Any]) -> None:
     assert device.signal_strength_dbm == -51.0
 
 
+def test_gasleser_pulse_from_payload(gasleser_pulse_payload: dict[str, Any]) -> None:
+    device = GasleserPulseDevice.from_payload(gasleser_pulse_payload)
+
+    assert device.device_id == "GAS_PULSE_4466926439"
+    assert device.device_type is DeviceType.GASLESER_PULSE
+    assert device.timestamp == 1785224596
+    assert device.count == 603
+    assert device.total_consumption == pytest.approx(37030.67)
+    assert device.current_flow_rate == pytest.approx(0.01)
+    assert device.signal_strength_dbm == -51.0
+
+
+def test_gasleser_pulse_omits_absent_fields() -> None:
+    device = GasleserPulseDevice.from_payload(
+        {"device_id": "GAS_PULSE_1", "timestamp": "1785224596"}
+    )
+
+    assert device.count is None
+    assert device.total_consumption is None
+    assert device.current_flow_rate is None
+    assert device.signal_strength_dbm is None
+
+
 def test_wasserleser_from_payload(
     wasserleser_payload: dict[str, Any],
 ) -> None:
@@ -165,6 +189,7 @@ def test_waermeleser_drops_temperature_sentinel(
     [
         ("stromleser_payload", StromleserOneDevice),
         ("gasleser_payload", GasleserDevice),
+        ("gasleser_pulse_payload", GasleserPulseDevice),
         ("wasserleser_payload", WasserleserDevice),
         ("waermeleser_payload", WaermeleserDevice),
     ],
@@ -214,7 +239,20 @@ def test_zero_cumulative_totals_omitted() -> None:
     assert gas_device.count == 10
     assert gas_device.current_flow_rate == 0.0
 
-    # 3. Wasserleser
+    # 3. Gasleser pulse
+    gas_pulse_payload = {
+        "device_id": "GAS_PULSE_12345",
+        "timestamp": "1776178480",
+        "count": 10,
+        "total_consumption": 0.0,     # cumulative -> should be skipped
+        "current_flow_rate": 0.0,     # non-cumulative zero -> should not be skipped
+    }
+    gas_pulse_device = GasleserPulseDevice.from_payload(gas_pulse_payload)
+    assert gas_pulse_device.total_consumption is None
+    assert gas_pulse_device.count == 10
+    assert gas_pulse_device.current_flow_rate == 0.0
+
+    # 4. Wasserleser
     wasser_payload = {
         "device_id": "WASSER_12345",
         "timestamp": "1776178480",
@@ -227,7 +265,7 @@ def test_zero_cumulative_totals_omitted() -> None:
     assert wasser_device.today_consumption == Measurement(value=0.0, unit="m3")
     assert wasser_device.current_flow_rate == Measurement(value=0.0, unit="l/h")
 
-    # 4. Waermeleser
+    # 5. Waermeleser
     heat_payload = {
         "device_id": "HEAT_12345",
         "timestamp": "1776178480",
