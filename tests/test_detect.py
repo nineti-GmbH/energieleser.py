@@ -14,6 +14,8 @@ from energieleser.exceptions import EnergieleserUnknownDeviceError
         ("STROM_ONE_8529546829", DeviceType.STROMLESER),
         ("strom_one_lowercase", DeviceType.STROMLESER),
         ("GAS_8530321017", DeviceType.GASLESER),
+        ("GAS_PULSE_4466926439", DeviceType.GASLESER_PULSE),
+        ("gas_pulse_lowercase", DeviceType.GASLESER_PULSE),
         ("WASSER_0000000001", DeviceType.WASSERLESER),
         ("HEAT_0000000001", DeviceType.WAERMELESER),
     ],

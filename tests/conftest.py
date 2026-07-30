@@ -35,6 +35,12 @@ def gasleser_payload() -> dict[str, Any]:
 
 
 @pytest.fixture
+def gasleser_pulse_payload() -> dict[str, Any]:
+    """Return the gasleser.pulse sample API response."""
+    return _load_fixture("gasleser_pulse")
+
+
+@pytest.fixture
 def wasserleser_payload() -> dict[str, Any]:
     """Return the wasserleser sample API response."""
     return _load_fixture("wasserleser")

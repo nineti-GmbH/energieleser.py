@@ -21,6 +21,7 @@ class DeviceType(StrEnum):
 
     STROMLESER = "stromleser"
     GASLESER = "gasleser"
+    GASLESER_PULSE = "gasleser.pulse"
     WASSERLESER = "wasserleser"
     WAERMELESER = "waermeleser"
 
@@ -28,9 +29,15 @@ class DeviceType(StrEnum):
 _PREFIX_MAP: dict[str, DeviceType] = {
     "STROM": DeviceType.STROMLESER,
     "GAS": DeviceType.GASLESER,
+    "GAS_PULSE": DeviceType.GASLESER_PULSE,
     "WASSER": DeviceType.WASSERLESER,
     "HEAT": DeviceType.WAERMELESER,
 }
+
+# "GAS_PULSE" also starts with "GAS", so the longest match must win.
+_PREFIXES_LONGEST_FIRST: tuple[tuple[str, DeviceType], ...] = tuple(
+    sorted(_PREFIX_MAP.items(), key=lambda item: len(item[0]), reverse=True)
+)
 
 _CUMULATIVE_FIELDS: set[tuple[DeviceType, str]] = {
     (DeviceType.STROMLESER, "1.8.0"),
@@ -44,6 +51,7 @@ _CUMULATIVE_FIELDS: set[tuple[DeviceType, str]] = {
     (DeviceType.STROMLESER, "2.8.3"),
     (DeviceType.STROMLESER, "2.8.4"),
     (DeviceType.GASLESER, "total_consumption"),
+    (DeviceType.GASLESER_PULSE, "total_consumption"),
     (DeviceType.WASSERLESER, "total_consumption"),
     (DeviceType.WAERMELESER, "total_energy_t1"),
     (DeviceType.WAERMELESER, "total_energy_t2"),
@@ -59,7 +67,7 @@ def detect_device_type(device_id: str) -> DeviceType:
     Raises EnergieleserUnknownDeviceError when no prefix matches.
     """
     upper = device_id.upper()
-    for prefix, dtype in _PREFIX_MAP.items():
+    for prefix, dtype in _PREFIXES_LONGEST_FIRST:
         if upper.startswith(prefix):
             return dtype
     raise EnergieleserUnknownDeviceError(device_id)
@@ -231,6 +239,31 @@ class StromleserOneDevice(EnergieleserDevice):
         )
 
 
+def _gasleser_fields(payload: Mapping[str, Any], device_type: DeviceType) -> dict[str, Any]:
+    """Parse the pulse-counter payload shared by gasleser and gasleser.pulse."""
+    count = payload.get("count")
+    total = payload.get("total_consumption")
+    flow = payload.get("current_flow_rate")
+
+    total_consumption: float | None = None
+    if total is not None:
+        total_val = float(total)
+        if not (
+            total_val == 0.0 and (device_type, "total_consumption") in _CUMULATIVE_FIELDS
+        ):
+            total_consumption = total_val
+
+    return {
+        "device_id": payload["device_id"],
+        "device_type": device_type,
+        "timestamp": int(payload["timestamp"]),
+        "count": int(count) if count is not None else None,
+        "total_consumption": total_consumption,
+        "current_flow_rate": float(flow) if flow is not None else None,
+        "signal_strength_dbm": _parse_rssi_dbm(payload),
+    }
+
+
 @dataclass(frozen=True, kw_only=True, slots=True)
 class GasleserDevice(EnergieleserDevice):
     """Parsed response for a gasleser (gas meter)."""
@@ -243,29 +276,26 @@ class GasleserDevice(EnergieleserDevice):
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> GasleserDevice:
         """Build a GasleserDevice from whatever fields are present."""
-        count = payload.get("count")
-        total = payload.get("total_consumption")
-        flow = payload.get("current_flow_rate")
-
-        total_consumption: float | None = None
-        if total is not None:
-            total_val = float(total)
-            if not (
-                total_val == 0.0
-                and (DeviceType.GASLESER, "total_consumption") in _CUMULATIVE_FIELDS
-            ):
-                total_consumption = total_val
+        return cls(**_gasleser_fields(payload, DeviceType.GASLESER))
 
 
-        return cls(
-            device_id=payload["device_id"],
-            device_type=DeviceType.GASLESER,
-            timestamp=int(payload["timestamp"]),
-            count=int(count) if count is not None else None,
-            total_consumption=total_consumption,
-            current_flow_rate=float(flow) if flow is not None else None,
-            signal_strength_dbm=_parse_rssi_dbm(payload),
-        )
+@dataclass(frozen=True, kw_only=True, slots=True)
+class GasleserPulseDevice(EnergieleserDevice):
+    """Parsed response for a gasleser.pulse (gas meter).
+
+    Reports the same fields as :class:`GasleserDevice`; only the device type
+    and the ``GAS_PULSE`` id prefix differ.
+    """
+
+    count: int | None = None
+    total_consumption: float | None = None
+    current_flow_rate: float | None = None
+    signal_strength_dbm: float | None = None
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, Any]) -> GasleserPulseDevice:
+        """Build a GasleserPulseDevice from whatever fields are present."""
+        return cls(**_gasleser_fields(payload, DeviceType.GASLESER_PULSE))
 
 
 _WASSERLESER_FIELDS = (
@@ -375,6 +405,7 @@ class WaermeleserDevice(EnergieleserDevice):
 _DEVICE_BUILDERS: dict[DeviceType, Callable[[Mapping[str, Any]], EnergieleserDevice]] = {
     DeviceType.STROMLESER: StromleserOneDevice.from_payload,
     DeviceType.GASLESER: GasleserDevice.from_payload,
+    DeviceType.GASLESER_PULSE: GasleserPulseDevice.from_payload,
     DeviceType.WASSERLESER: WasserleserDevice.from_payload,
     DeviceType.WAERMELESER: WaermeleserDevice.from_payload,
 }

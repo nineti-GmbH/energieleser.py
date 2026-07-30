@@ -6,7 +6,7 @@
 
 > Async Python client for energieleser smart meter devices.
 
-Talks to the device's local HTTP API and returns typed dataclasses for **stromleser.one**, **gasleser**, **wasserleser** and **wärmeleser**. Powers the upcoming Home Assistant integration.
+Talks to the device's local HTTP API and returns typed dataclasses for **stromleser.one**, **gasleser**, **gasleser.pulse**, **wasserleser** and **wärmeleser**. Powers the Home Assistant integration.
 
 ## Installing / Getting started
 
