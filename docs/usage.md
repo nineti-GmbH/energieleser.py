@@ -28,3 +28,20 @@ async with aiohttp.ClientSession() as session:
     device = await client.get_device()
     # session is NOT closed by the client when you supply your own
 ```
+
+## Checking for firmware updates
+
+The OTA server publishes one latest version per device type. The call is
+stateless — poll it at whatever cadence suits you (Home Assistant uses 6h).
+
+```python
+import aiohttp
+from energieleser import get_latest_firmware_versions, is_newer_version
+
+async with aiohttp.ClientSession() as session:
+    latest = await get_latest_firmware_versions(session)
+
+installed = "v1.4.22"  # e.g. from the device's mDNS "version" TXT record
+if (version := latest.get(device.device_type)) and is_newer_version(installed, version):
+    print(f"Firmware {version} available — update via the energieleser app")
+```
