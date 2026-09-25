@@ -23,6 +23,11 @@ from energieleser.models import (
     detect_device_type,
     parse_device,
 )
+from energieleser.update import (
+    LATEST_VERSIONS_URL,
+    get_latest_firmware_versions,
+    is_newer_version,
+)
 
 try:
     __version__ = version(__name__)
@@ -31,6 +36,7 @@ except PackageNotFoundError:  # pragma: no cover
     __version__ = "0.0.0"
 
 __all__ = [
+    "LATEST_VERSIONS_URL",
     "DeviceType",
     "EnergieleserClient",
     "EnergieleserConnectionError",
@@ -46,6 +52,8 @@ __all__ = [
     "WaermeleserDevice",
     "WasserleserDevice",
     "detect_device_type",
+    "get_latest_firmware_versions",
+    "is_newer_version",
     "parse_device",
 ]
 
